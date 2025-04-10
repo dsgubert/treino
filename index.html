@@ -2,8 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Temporizador HIIT 20/10</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2206/2206368.png" type="image/png" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
@@ -14,29 +15,47 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 20px;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 40px 20px;
     }
     .container {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       padding: 30px;
       border-radius: 20px;
-      max-width: 600px;
+      max-width: 700px;
       width: 100%;
       box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
     }
     h1 {
-      font-size: 24px;
-      margin-bottom: 20px;
+      font-size: 28px;
+      margin-bottom: 15px;
       text-align: center;
     }
-    .row {
-      display: flex;
-      gap: 10px;
+    select, input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .exercise-block {
+      margin-bottom: 20px;
+    }
+    .exercise-block input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
       margin-bottom: 10px;
     }
-    .row input[type="text"], .row input[type="number"] {
+    .exercise-row {
+      display: flex;
+      gap: 10px;
+    }
+    .exercise-row input[type="number"] {
       flex: 1;
       padding: 10px;
       border-radius: 8px;
@@ -46,7 +65,7 @@
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 10px;
+      margin-top: 12px;
       background-color: #00c853;
       color: white;
       border: none;
@@ -59,24 +78,49 @@
       background-color: #00b342;
     }
     .timer {
-      font-size: 40px;
+      font-size: 48px;
       font-weight: bold;
       text-align: center;
-      margin-top: 20px;
+      margin-top: 25px;
     }
     .status {
-      font-size: 20px;
+      font-size: 22px;
       text-align: center;
-      margin-top: 10px;
+      margin-top: 12px;
+    }
+    @media screen and (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      .timer {
+        font-size: 36px;
+      }
+      .status {
+        font-size: 18px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Temporizador HIIT Personalizado</h1>
+    <select id="exerciseCount" onchange="generateInputs()">
+      <option value="4">4 Exercícios</option>
+      <option value="5">5 Exercícios</option>
+      <option value="6" selected>6 Exercícios</option>
+      <option value="7">7 Exercícios</option>
+      <option value="8">8 Exercícios</option>
+      <option value="9">9 Exercícios</option>
+      <option value="10">10 Exercícios</option>
+    </select>
+    <input type="number" id="repeatCount" placeholder="Repetições da Rotina (Ex: 2)" min="1" value="2" />
     <div id="inputs"></div>
-    <button onclick="startWorkout()">Iniciar Treino</button>
+    <button onclick="startWorkout()" id="startBtn">Iniciar Treino</button>
     <button onclick="togglePause()" style="background:#ffab00; display:none" id="pauseBtn">⏸ Pausar</button>
+    <button onclick="cancelWorkout()" style="background:#d32f2f; display:none" id="cancelBtn">❌ Cancelar</button>
     <div class="timer" id="timer">00:00</div>
     <div class="status" id="status"></div>
   </div>
@@ -86,39 +130,53 @@
     const timerDisplay = document.getElementById('timer');
     const statusDisplay = document.getElementById('status');
     const pauseBtn = document.getElementById('pauseBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const startBtn = document.getElementById('startBtn');
+    const exerciseCountSelect = document.getElementById('exerciseCount');
+    const repeatCountInput = document.getElementById('repeatCount');
 
     let exercises = [];
     let paused = false;
     let currentTimeout;
-    let workTime = 20;
-    let restTime = 10;
+    let cancelled = false;
 
-    for (let i = 0; i < 6; i++) {
-      const row = document.createElement('div');
-      row.className = 'row';
+    function generateInputs() {
+      const count = parseInt(exerciseCountSelect.value);
+      inputsDiv.innerHTML = '';
 
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = `Exercício ${i + 1}`;
-      input.id = `exercise${i}`;
+      for (let i = 0; i < count; i++) {
+        const block = document.createElement('div');
+        block.className = 'exercise-block';
 
-      const work = document.createElement('input');
-      work.type = 'number';
-      work.placeholder = 'Ativo (s)';
-      work.min = 1;
-      work.id = `work${i}`;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = `Exercício ${i + 1}`;
+        input.id = `exercise${i}`;
 
-      const rest = document.createElement('input');
-      rest.type = 'number';
-      rest.placeholder = 'Descanso (s)';
-      rest.min = 1;
-      rest.id = `rest${i}`;
+        const row = document.createElement('div');
+        row.className = 'exercise-row';
 
-      row.appendChild(input);
-      row.appendChild(work);
-      row.appendChild(rest);
-      inputsDiv.appendChild(row);
+        const work = document.createElement('input');
+        work.type = 'number';
+        work.placeholder = 'Ativo (s)';
+        work.min = 1;
+        work.id = `work${i}`;
+
+        const rest = document.createElement('input');
+        rest.type = 'number';
+        rest.placeholder = 'Descanso (s)';
+        rest.min = 1;
+        rest.id = `rest${i}`;
+
+        row.appendChild(work);
+        row.appendChild(rest);
+        block.appendChild(input);
+        block.appendChild(row);
+        inputsDiv.appendChild(block);
+      }
     }
+
+    generateInputs();
 
     function sleep(ms) {
       return new Promise(resolve => {
@@ -129,6 +187,7 @@
     async function waitWithPause(ms) {
       let interval = 1000;
       for (let i = ms / 1000; i > 0; i--) {
+        if (cancelled) return;
         while (paused) await sleep(500);
         timerDisplay.textContent = `00:${i < 10 ? '0' : ''}${i}`;
         await sleep(interval);
@@ -136,44 +195,71 @@
     }
 
     async function startWorkout() {
+      cancelled = false;
       exercises = [];
-      for (let i = 0; i < 6; i++) {
+      const count = parseInt(exerciseCountSelect.value);
+      const repeatCount = parseInt(repeatCountInput.value) || 2;
+
+      for (let i = 0; i < count; i++) {
         const name = document.getElementById(`exercise${i}`).value || `Exercício ${i + 1}`;
         const work = parseInt(document.getElementById(`work${i}`).value) || 20;
         const rest = parseInt(document.getElementById(`rest${i}`).value) || 10;
         exercises.push({ name, work, rest });
       }
 
-      document.querySelector('button').style.display = 'none';
+      startBtn.style.display = 'none';
       pauseBtn.style.display = 'block';
+      cancelBtn.style.display = 'block';
 
       statusDisplay.textContent = 'Prepare-se!';
       await waitWithPause(5000);
+      if (cancelled) return;
 
-      await doBlock();
-      statusDisplay.textContent = '🛌 Descanso Longo';
-      await waitWithPause(120000);
-      await doBlock();
+      for (let round = 1; round <= repeatCount; round++) {
+        await doBlock(round);
+        if (cancelled) return;
+        if (round < repeatCount) {
+          statusDisplay.textContent = '🛌 Descanso Longo';
+          await waitWithPause(120000);
+          if (cancelled) return;
+        }
+      }
 
       statusDisplay.textContent = '✅ Fim do treino!';
       timerDisplay.textContent = '00:00';
+      startBtn.style.display = 'block';
+      pauseBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
     }
 
-    async function doBlock() {
-      for (let i = 0; i < 6; i++) {
+    async function doBlock(round) {
+      for (let i = 0; i < exercises.length; i++) {
         const { name, work, rest } = exercises[i];
         const next = exercises[(i + 1) % exercises.length].name;
 
-        statusDisplay.textContent = `🔴 ${name} (Rodada ${i + 1})`;
+        statusDisplay.textContent = `🔴 ${name} (Rodada ${round})`;
         await waitWithPause(work * 1000);
+        if (cancelled) return;
+
         statusDisplay.textContent = `🟢 Descanso ➡️ Próximo: ${next}`;
         await waitWithPause(rest * 1000);
+        if (cancelled) return;
       }
     }
 
     function togglePause() {
       paused = !paused;
       pauseBtn.textContent = paused ? '▶️ Continuar' : '⏸ Pausar';
+    }
+
+    function cancelWorkout() {
+      cancelled = true;
+      clearTimeout(currentTimeout);
+      statusDisplay.textContent = 'Treino cancelado.';
+      timerDisplay.textContent = '00:00';
+      pauseBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+      startBtn.style.display = 'block';
     }
   </script>
 </body>
