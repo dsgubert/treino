@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Temporizador HIIT 20/10</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 20px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .row input[type="text"], .row input[type="number"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background-color: #00c853;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #00b342;
+    }
+    .timer {
+      font-size: 40px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .status {
+      font-size: 20px;
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Temporizador HIIT Personalizado</h1>
+    <div id="inputs"></div>
+    <button onclick="startWorkout()">Iniciar Treino</button>
+    <button onclick="togglePause()" style="background:#ffab00; display:none" id="pauseBtn">⏸ Pausar</button>
+    <div class="timer" id="timer">00:00</div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const inputsDiv = document.getElementById('inputs');
+    const timerDisplay = document.getElementById('timer');
+    const statusDisplay = document.getElementById('status');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    let exercises = [];
+    let paused = false;
+    let currentTimeout;
+    let workTime = 20;
+    let restTime = 10;
+
+    for (let i = 0; i < 6; i++) {
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = `Exercício ${i + 1}`;
+      input.id = `exercise${i}`;
+
+      const work = document.createElement('input');
+      work.type = 'number';
+      work.placeholder = 'Ativo (s)';
+      work.min = 1;
+      work.id = `work${i}`;
+
+      const rest = document.createElement('input');
+      rest.type = 'number';
+      rest.placeholder = 'Descanso (s)';
+      rest.min = 1;
+      rest.id = `rest${i}`;
+
+      row.appendChild(input);
+      row.appendChild(work);
+      row.appendChild(rest);
+      inputsDiv.appendChild(row);
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => {
+        currentTimeout = setTimeout(resolve, ms);
+      });
+    }
+
+    async function waitWithPause(ms) {
+      let interval = 1000;
+      for (let i = ms / 1000; i > 0; i--) {
+        while (paused) await sleep(500);
+        timerDisplay.textContent = `00:${i < 10 ? '0' : ''}${i}`;
+        await sleep(interval);
+      }
+    }
+
+    async function startWorkout() {
+      exercises = [];
+      for (let i = 0; i < 6; i++) {
+        const name = document.getElementById(`exercise${i}`).value || `Exercício ${i + 1}`;
+        const work = parseInt(document.getElementById(`work${i}`).value) || 20;
+        const rest = parseInt(document.getElementById(`rest${i}`).value) || 10;
+        exercises.push({ name, work, rest });
+      }
+
+      document.querySelector('button').style.display = 'none';
+      pauseBtn.style.display = 'block';
+
+      statusDisplay.textContent = 'Prepare-se!';
+      await waitWithPause(5000);
+
+      await doBlock();
+      statusDisplay.textContent = '🛌 Descanso Longo';
+      await waitWithPause(120000);
+      await doBlock();
+
+      statusDisplay.textContent = '✅ Fim do treino!';
+      timerDisplay.textContent = '00:00';
+    }
+
+    async function doBlock() {
+      for (let i = 0; i < 6; i++) {
+        const { name, work, rest } = exercises[i];
+        const next = exercises[(i + 1) % exercises.length].name;
+
+        statusDisplay.textContent = `🔴 ${name} (Rodada ${i + 1})`;
+        await waitWithPause(work * 1000);
+        statusDisplay.textContent = `🟢 Descanso ➡️ Próximo: ${next}`;
+        await waitWithPause(rest * 1000);
+      }
+    }
+
+    function togglePause() {
+      paused = !paused;
+      pauseBtn.textContent = paused ? '▶️ Continuar' : '⏸ Pausar';
+    }
+  </script>
+</body>
+</html>
